@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:pages": "BASE_URL=/${npm_package_name}/ vite build",
     "deploy": "npm run build:pages && gh-pages -d dist -b gh-pages --nojekyll",
+    "deploy:safe": "git add -A && (git commit -m 'chore: deploy' || git commit -m 'chore: deploy' --allow-empty) && git push -u origin main && npm run deploy",
     "lint": "eslint .",
     "preview": "vite preview"
   },
