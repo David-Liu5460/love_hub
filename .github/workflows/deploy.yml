@@ -23,7 +23,8 @@ jobs:
         with:
           node-version: 18
           cache: npm
-      - run: npm ci
+      - run: npm ci --include=dev
+      - run: npx vite --version
       - run: npm run build
         env:
           BASE_URL: /${{ github.event.repository.name }}/
