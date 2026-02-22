@@ -1,11 +1,12 @@
 import { ConfigProvider } from 'antd'
-import { HeartFilled } from '@ant-design/icons'
 import { Layout } from './components/Layout'
 import { useHashRoute } from './lib/hashRoute'
+import { AuthProvider, useAuth } from './lib/auth'
 import { Dashboard } from './pages/Dashboard'
 import { History } from './pages/History'
 import { NewQuarrel } from './pages/NewQuarrel'
 import { Profile } from './pages/Profile'
+import { Login } from './pages/Login'
 import './App.css'
 
 const customTheme = {
@@ -57,9 +58,31 @@ const customTheme = {
   },
 }
 
-function App() {
+function AppContent() {
   const { path, navigate } = useHashRoute()
+  const { user, loading } = useAuth()
 
+  // 加载中显示空白
+  if (loading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #fff5f5 0%, #ffecec 100%)'
+      }}>
+        <div style={{ color: '#ff6b6b', fontSize: '18px' }}>加载中...</div>
+      </div>
+    )
+  }
+
+  // 未登录显示登录页
+  if (!user) {
+    return <Login onNavigate={navigate} />
+  }
+
+  // 已登录显示主应用
   const content =
     path === '/new' ? (
       <NewQuarrel onNavigate={navigate} />
@@ -72,8 +95,16 @@ function App() {
     )
 
   return (
+    <Layout routePath={path}>{content}</Layout>
+  )
+}
+
+function App() {
+  return (
     <ConfigProvider theme={customTheme}>
-      <Layout routePath={path}>{content}</Layout>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ConfigProvider>
   )
 }

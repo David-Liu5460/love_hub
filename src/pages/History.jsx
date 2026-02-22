@@ -1,12 +1,13 @@
-import { Card, Table, Tag, Button, DatePicker, Select, Space, Typography, Modal, Row, Col, Rate, Badge, Empty, message } from 'antd'
-import { EyeOutlined, EditOutlined, DeleteOutlined, FilterOutlined, CalendarOutlined, HeartFilled, HistoryOutlined, UserOutlined, TagOutlined } from '@ant-design/icons'
+import { Card, Table, Tag, Button, DatePicker, Select, Space, Typography, Modal, Row, Col, Rate, Badge, Empty, message, Form, Input, Switch } from 'antd'
+import { EyeOutlined, EditOutlined, DeleteOutlined, FilterOutlined, CalendarOutlined, HeartFilled, HistoryOutlined, UserOutlined, TagOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import { useState, useEffect } from 'react'
 import dayjs from 'dayjs'
-import { getQuarrels, deleteQuarrel } from '../lib/quarrels'
+import { getQuarrels, deleteQuarrel, updateQuarrel } from '../lib/quarrels'
 
 const { Title, Text } = Typography
 const { RangePicker } = DatePicker
 const { Option } = Select
+const { TextArea } = Input
 
 const reasonLabels = {
   habit: '生活习惯',
@@ -69,22 +70,19 @@ const treatmentLabels = {
   pending: '待处理',
 }
 
-const principalLabels = {
-  male: '男方',
-  female: '女方',
-  both: '双方',
-}
-
 export function History() {
   const [quarrels, setQuarrels] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modalVisible, setModalVisible] = useState(false)
+  const [viewModalVisible, setViewModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
   const [selectedQuarrel, setSelectedQuarrel] = useState(null)
   const [filters, setFilters] = useState({
     reason: '',
     dateRange: [],
     status: '',
   })
+  const [form] = Form.useForm()
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     loadQuarrels()
@@ -125,7 +123,51 @@ export function History() {
 
   const showDetails = (record) => {
     setSelectedQuarrel(record)
-    setModalVisible(true)
+    setViewModalVisible(true)
+  }
+
+  const showEdit = (record) => {
+    setSelectedQuarrel(record)
+    form.setFieldsValue({
+      title: record.title,
+      details: record.details,
+      reason: record.reason,
+      strength: record.strength,
+      status: record.status,
+      is_principal: record.is_principal || false,
+      tag: record.tag,
+      treatment: record.treatment,
+      opinion_male: record.opinion_male,
+      opinion_female: record.opinion_female,
+    })
+    setEditModalVisible(true)
+  }
+
+  const handleSave = async (values) => {
+    if (!selectedQuarrel) return
+    
+    setSaving(true)
+    try {
+      const { data, error } = await updateQuarrel(selectedQuarrel.id, {
+        ...values,
+        update_at: new Date().toISOString(),
+      })
+      
+      if (error) {
+        console.error('Update error:', error)
+        message.error('更新失败: ' + error.message)
+        return
+      }
+      
+      message.success('更新成功')
+      setEditModalVisible(false)
+      loadQuarrels()
+    } catch (error) {
+      console.error('Error updating quarrel:', error)
+      message.error('更新失败: ' + (error.message || '未知错误'))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const filteredQuarrels = quarrels.filter((quarrel) => {
@@ -182,12 +224,17 @@ export function History() {
       dataIndex: 'strength',
       key: 'strength',
       render: (strength) => (
-        <Rate
-          disabled
-          value={strength}
-          character={<HeartFilled style={{ color: '#ff6b6b', fontSize: '14px' }} />}
-          count={5}
-        />
+        <div style={{ color: '#ff6b6b', fontSize: '14px' }}>
+          {Array.from({ length: 5 }, (_, i) => (
+            <HeartFilled
+              key={i}
+              style={{
+                color: i < (strength || 0) ? '#ff6b6b' : '#e8e8e8',
+                marginRight: '2px',
+              }}
+            />
+          ))}
+        </div>
       ),
       sorter: (a, b) => (a.strength || 0) - (b.strength || 0),
     },
@@ -211,10 +258,10 @@ export function History() {
       key: 'is_principal',
       render: (principal) => (
         <Tag 
-          icon={<UserOutlined />}
+          color={principal ? 'red' : 'default'}
           style={{ borderRadius: '8px' }}
         >
-          {principalLabels[principal] || principal}
+          {principal ? '是' : '否'}
         </Tag>
       ),
     },
@@ -234,6 +281,7 @@ export function History() {
           <Button
             type="text"
             icon={<EditOutlined />}
+            onClick={() => showEdit(record)}
             style={{ color: '#52c41a' }}
           >
             编辑
@@ -259,7 +307,7 @@ export function History() {
             历史记录
           </Title>
           <Text type="secondary" style={{ fontSize: '16px' }}>
-            回顾每一次争吵，从中学习和成长
+            回顾每一次情感交流，从中学习和成长
           </Text>
         </div>
         <Button
@@ -299,7 +347,7 @@ export function History() {
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Text style={{ color: '#666', fontSize: '14px' }}>吵架原因</Text>
+              <Text style={{ color: '#666', fontSize: '14px' }}>交流原因</Text>
               <Select
                 placeholder="选择原因"
                 allowClear
@@ -375,7 +423,7 @@ export function History() {
           locale={{
             emptyText: (
               <Empty
-                description="暂无吵架记录"
+                description="暂无记录"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               >
                 <Button
@@ -395,11 +443,11 @@ export function History() {
         />
       </Card>
 
-      {/* 详情弹窗 */}
+      {/* 查看详情弹窗 */}
       <Modal
-        title={selectedQuarrel?.title || '吵架详情'}
-        visible={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        title={selectedQuarrel?.title || '情感交流详情'}
+        open={viewModalVisible}
+        onCancel={() => setViewModalVisible(false)}
         footer={null}
         width={800}
         style={{ top: 50 }}
@@ -410,7 +458,7 @@ export function History() {
             <Row gutter={[32, 24]}>
               <Col xs={24} sm={12}>
                 <div style={{ marginBottom: '16px' }}>
-                  <Text type="secondary" style={{ fontSize: '14px' }}>吵架原因</Text>
+                  <Text type="secondary" style={{ fontSize: '14px' }}>交流原因</Text>
                   <div style={{ marginTop: '4px' }}>
                     <Tag 
                       color={reasonColors[selectedQuarrel.reason]} 
@@ -464,10 +512,10 @@ export function History() {
             <Row gutter={[32, 24]}>
               <Col xs={24} sm={12}>
                 <div style={{ marginBottom: '16px' }}>
-                  <Text type="secondary" style={{ fontSize: '14px' }}>主要责任人</Text>
+                  <Text type="secondary" style={{ fontSize: '14px' }}>原则性问题</Text>
                   <div style={{ marginTop: '4px' }}>
-                    <Tag icon={<UserOutlined />} style={{ borderRadius: '8px' }}>
-                      {principalLabels[selectedQuarrel.is_principal] || selectedQuarrel.is_principal}
+                    <Tag color={selectedQuarrel.is_principal ? 'red' : 'default'} style={{ borderRadius: '8px' }}>
+                      {selectedQuarrel.is_principal ? '是' : '否'}
                     </Tag>
                   </div>
                 </div>
@@ -476,14 +524,19 @@ export function History() {
                 <div style={{ marginBottom: '16px' }}>
                   <Text type="secondary" style={{ fontSize: '14px' }}>标签</Text>
                   <div style={{ marginTop: '4px' }}>
-                    {selectedQuarrel.tag ? (
-                      <Tag 
-                        color={tagColors[selectedQuarrel.tag]} 
-                        icon={<TagOutlined />}
-                        style={{ borderRadius: '8px' }}
-                      >
-                        {tagLabels[selectedQuarrel.tag]}
-                      </Tag>
+                    {selectedQuarrel.tag && selectedQuarrel.tag.length > 0 ? (
+                      <Space>
+                        {selectedQuarrel.tag.map((t, i) => (
+                          <Tag 
+                            key={i}
+                            color={tagColors[t]} 
+                            icon={<TagOutlined />}
+                            style={{ borderRadius: '8px' }}
+                          >
+                            {tagLabels[t]}
+                          </Tag>
+                        ))}
+                      </Space>
                     ) : (
                       <Text type="secondary">无标签</Text>
                     )}
@@ -553,6 +606,173 @@ export function History() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* 编辑弹窗 */}
+      <Modal
+        title={<Title level={4} style={{ margin: 0, color: '#ff6b6b' }}>编辑情感交流记录</Title>}
+        open={editModalVisible}
+        onCancel={() => setEditModalVisible(false)}
+        footer={null}
+        width={900}
+        style={{ top: 30 }}
+        bodyStyle={{ padding: '40px', maxHeight: '85vh', overflow: 'auto' }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSave}
+          size="large"
+        >
+          <Row gutter={[32, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>标题</Text>}
+                name="title"
+                rules={[{ required: true, message: '请输入标题' }]}
+              >
+                <Input placeholder="输入标题" style={{ borderRadius: '10px', height: '42px' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>交流原因</Text>}
+                name="reason"
+                rules={[{ required: true, message: '请选择原因' }]}
+              >
+                <Select placeholder="选择原因" style={{ borderRadius: '10px' }}>
+                  {Object.entries(reasonLabels).map(([value, label]) => (
+                    <Option key={value} value={value}>{label}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[32, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>强度等级</Text>}
+                name="strength"
+                rules={[{ required: true, message: '请选择强度' }]}
+              >
+                <Rate
+                  style={{ fontSize: '28px', color: '#ff6b6b' }}
+                  count={5}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>当前状态</Text>}
+                name="status"
+                rules={[{ required: true, message: '请选择状态' }]}
+              >
+                <Select placeholder="选择状态" style={{ borderRadius: '10px' }}>
+                  {Object.entries(statusLabels).map(([value, label]) => (
+                    <Option key={value} value={value}>{label}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[32, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>原则性问题</Text>}
+                name="is_principal"
+                valuePropName="checked"
+              >
+                <Switch 
+                  checkedChildren="是" 
+                  unCheckedChildren="否" 
+                  style={{ backgroundColor: '#ff6b6b' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>处理方式</Text>}
+                name="treatment"
+              >
+                <Select placeholder="选择处理方式" allowClear style={{ borderRadius: '10px' }}>
+                  {Object.entries(treatmentLabels).map(([value, label]) => (
+                    <Option key={value} value={value}>{label}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label={<Text strong style={{ fontSize: '15px' }}>事件详情</Text>}
+            name="details"
+            rules={[{ required: true, message: '请输入详情' }]}
+          >
+            <TextArea 
+              rows={5} 
+              placeholder="详细描述事件经过" 
+              style={{ borderRadius: '10px', resize: 'none' }}
+            />
+          </Form.Item>
+
+          <Row gutter={[32, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>男方观点</Text>}
+                name="opinion_male"
+              >
+                <TextArea 
+                  rows={4} 
+                  placeholder="男方的想法和感受" 
+                  style={{ borderRadius: '10px', resize: 'none' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label={<Text strong style={{ fontSize: '15px' }}>女方观点</Text>}
+                name="opinion_female"
+              >
+                <TextArea 
+                  rows={4} 
+                  placeholder="女方的想法和感受" 
+                  style={{ borderRadius: '10px', resize: 'none' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: '32px' }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }} size="large">
+              <Button 
+                size="large"
+                icon={<CloseOutlined />} 
+                onClick={() => setEditModalVisible(false)}
+                style={{ borderRadius: '10px', padding: '0 24px' }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                size="large"
+                htmlType="submit"
+                loading={saving}
+                icon={<SaveOutlined />}
+                style={{
+                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '0 32px',
+                  height: '44px',
+                }}
+              >
+                保存
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   )

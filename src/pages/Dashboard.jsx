@@ -91,10 +91,10 @@ export function Dashboard({ onNavigate }) {
         bodyStyle={{ padding: '40px 32px', textAlign: 'center' }}
       >
         <Title level={2} style={{ color: '#fff', marginBottom: '12px', fontWeight: 600 }}>
-          情侣吵架管理平台
+          爱的缓冲带
         </Title>
         <Text style={{ color: '#fff', fontSize: '16px', opacity: 0.95, display: 'block', marginBottom: '24px' }}>
-          记录、分析、改善 - 让每一次争吵都成为成长的契机
+          记录、理解、成长 - 让每一次情感交流都成为爱的见证
         </Text>
         <Space size="middle">
           <Button
@@ -112,7 +112,7 @@ export function Dashboard({ onNavigate }) {
               padding: '0 24px',
             }}
           >
-            记录新的吵架
+            记录新的情感交流
           </Button>
         </Space>
       </Card>
@@ -131,7 +131,7 @@ export function Dashboard({ onNavigate }) {
             bodyStyle={{ padding: '20px' }}
           >
             <Statistic
-              title={<Text style={{ color: '#666', fontSize: '14px' }}>总吵架次数</Text>}
+              title={<Text style={{ color: '#666', fontSize: '14px' }}>总记录次数</Text>}
               value={stats.total}
               valueStyle={{ color: '#333', fontSize: '32px', fontWeight: 600 }}
               prefix={<FireOutlined style={{ color: '#ff6b6b', fontSize: '20px', marginRight: '8px' }} />}
@@ -144,7 +144,7 @@ export function Dashboard({ onNavigate }) {
             bodyStyle={{ padding: '20px' }}
           >
             <Statistic
-              title={<Text style={{ color: '#666', fontSize: '14px' }}>本月吵架</Text>}
+              title={<Text style={{ color: '#666', fontSize: '14px' }}>本月记录</Text>}
               value={stats.thisMonth}
               valueStyle={{ color: '#333', fontSize: '32px', fontWeight: 600 }}
               prefix={<CalendarOutlined style={{ color: '#ff6b6b', fontSize: '20px', marginRight: '8px' }} />}
@@ -214,7 +214,7 @@ export function Dashboard({ onNavigate }) {
         style={{ borderRadius: '12px', border: '1px solid #f0f0f0' }}
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text strong style={{ fontSize: '16px' }}>最近吵架记录</Text>
+            <Text strong style={{ fontSize: '16px' }}>最近情感交流记录</Text>
             <Button 
               type="link" 
               onClick={() => onNavigate('/history')}
@@ -233,7 +233,7 @@ export function Dashboard({ onNavigate }) {
         ) : recentItems.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <FileTextOutlined style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }} />
-            <Text style={{ display: 'block', marginBottom: '8px', fontSize: '16px' }}>还没有吵架记录</Text>
+            <Text style={{ display: 'block', marginBottom: '8px', fontSize: '16px' }}>还没有记录</Text>
             <Button 
               type="primary" 
               onClick={() => onNavigate('/new')}
@@ -243,7 +243,7 @@ export function Dashboard({ onNavigate }) {
                 borderRadius: '8px'
               }}
             >
-              记录第一次吵架
+              记录第一次情感交流
             </Button>
           </div>
         ) : (

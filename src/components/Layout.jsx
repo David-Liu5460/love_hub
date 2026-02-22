@@ -1,9 +1,10 @@
-import { Layout as AntLayout, Menu, Avatar, Button, Space, Typography } from 'antd'
+import { Layout as AntLayout, Menu, Avatar, Button, Space, Typography, Dropdown } from 'antd'
 import { HeartOutlined, DashboardOutlined, HistoryOutlined, PlusCircleOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons'
 import { useState } from 'react'
+import { useAuth } from '../lib/auth'
 
 const { Header, Content } = AntLayout
-const { Title } = Typography
+const { Title, Text } = Typography
 
 export function Layout({ children, routePath }) {
   const [current, setCurrent] = useState(
@@ -12,6 +13,7 @@ export function Layout({ children, routePath }) {
     routePath === '/profile' ? 'profile' : 
     'dashboard'
   )
+  const { user, signOut } = useAuth()
 
   const menuItems = [
     {
@@ -42,6 +44,19 @@ export function Layout({ children, routePath }) {
     window.location.hash = path
   }
 
+  const handleLogout = async () => {
+    await signOut()
+  }
+
+  const userMenuItems = [
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleLogout,
+    },
+  ]
+
   return (
     <AntLayout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f5 0%, #ffecec 100%)' }}>
       <Header style={{ 
@@ -56,7 +71,7 @@ export function Layout({ children, routePath }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <HeartOutlined style={{ fontSize: '24px', color: '#ff6b6b' }} />
           <Title level={3} style={{ margin: 0, color: '#ff6b6b', fontWeight: 600 }}>
-            情侣吵架管理
+            爱的缓冲带
           </Title>
         </div>
         
@@ -75,20 +90,18 @@ export function Layout({ children, routePath }) {
           theme="light"
         />
 
-        <Space size="middle">
-          <Avatar
-            size="default"
-            icon={<UserOutlined />}
-            style={{ backgroundColor: '#ff6b6b' }}
-          />
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            style={{ color: '#666' }}
-          >
-            退出
-          </Button>
-        </Space>
+        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Space size="small" style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: '8px', transition: 'background 0.3s' }}>
+            <Text style={{ color: '#333', fontSize: '14px' }}>
+              {user?.user_metadata?.display_name || user?.email?.split('@')[0] || '用户'}
+            </Text>
+            <Avatar
+              size="default"
+              icon={<UserOutlined />}
+              style={{ backgroundColor: '#ff6b6b' }}
+            />
+          </Space>
+        </Dropdown>
       </Header>
 
       <Content style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>

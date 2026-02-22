@@ -2,6 +2,7 @@ import { Card, Form, Input, Select, Rate, Button, Row, Col, DatePicker, Typograp
 import { SaveOutlined, ArrowLeftOutlined, CalendarOutlined, TagOutlined, EditOutlined, HeartFilled } from '@ant-design/icons'
 import { useState } from 'react'
 import { createQuarrel } from '../lib/quarrels'
+import { useAuth } from '../lib/auth'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -45,6 +46,7 @@ const statusOptions = [
 export function NewQuarrel({ onNavigate }) {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
 
   const handleSubmit = async (values) => {
     setLoading(true)
@@ -62,11 +64,11 @@ export function NewQuarrel({ onNavigate }) {
         opinion_female: values.opinion_female,
         create_at: values.create_at?.toISOString(),
         update_at: new Date().toISOString(),
-        creator: '94e86047-0e52-4611-bce9-f6f2b06b4531',
+        creator: user?.id,
       }
 
       await createQuarrel(quarrelData)
-      message.success('吵架记录创建成功！')
+      message.success('记录创建成功！')
       form.resetFields()
       onNavigate('/history')
     } catch (error) {
@@ -81,10 +83,10 @@ export function NewQuarrel({ onNavigate }) {
     <div style={{ padding: '8px', maxWidth: '100%', margin: '0 auto' }}>
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
         <Title level={2} style={{ color: '#ff6b6b', marginBottom: '8px' }}>
-          记录吵架事件
+          记录情感交流
         </Title>
         <Text type="secondary" style={{ fontSize: '16px' }}>
-          坦诚记录，理性分析，让每一次争吵都成为感情的催化剂
+          坦诚记录，用心倾听，让每一次交流都成为爱的见证
         </Text>
       </div>
 
@@ -110,7 +112,7 @@ export function NewQuarrel({ onNavigate }) {
             rules={[{ required: true, message: '请输入事件标题' }]}
           >
             <Input
-              placeholder="给这次争吵起个标题..."
+              placeholder="给这次情感交流起个标题..."
               style={{ borderRadius: '12px' }}
               prefix={<EditOutlined style={{ color: '#ff6b6b' }} />}
             />
@@ -124,21 +126,21 @@ export function NewQuarrel({ onNavigate }) {
           >
             <TextArea
               rows={4}
-              placeholder="详细描述吵架的经过、主要分歧点..."
+              placeholder="详细描述情感交流的经过、主要分歧点..."
               style={{ borderRadius: '12px', resize: 'none' }}
             />
           </Form.Item>
 
           <Row gutter={[32, 24]}>
             <Col xs={24} md={12}>
-              {/* 吵架原因 */}
+              {/* 交流原因 */}
               <Form.Item
-                label="吵架原因"
+                label="交流原因"
                 name="reason"
-                rules={[{ required: true, message: '请选择吵架原因' }]}
+                rules={[{ required: true, message: '请选择交流原因' }]}
               >
                 <Select
-                  placeholder="选择吵架原因"
+                  placeholder="选择交流原因"
                   style={{ borderRadius: '12px' }}
                   dropdownStyle={{ borderRadius: '12px' }}
                 >
@@ -362,7 +364,7 @@ export function NewQuarrel({ onNavigate }) {
             温馨小贴士
           </Title>
           <Text type="secondary" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-            每一次争吵都是了解彼此的机会，记录下这些时刻，
+            每一次交流都是了解彼此的机会，记录下这些时刻，
             让我们一起成长，让爱情更加坚固。
           </Text>
         </div>

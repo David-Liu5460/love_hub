@@ -1,42 +1,113 @@
-import { Card, Avatar, Descriptions, Button, Upload, Tabs, Progress, Statistic, Row, Col, Space, Typography, Divider, Tag, Timeline, Badge, Rate } from 'antd'
+import { Card, Avatar, Descriptions, Button, Upload, Tabs, Progress, Statistic, Row, Col, Space, Typography, Divider, Tag, Timeline, Badge, Rate, Modal, Form, Input, message } from 'antd'
 import { UserOutlined, EditOutlined, ExportOutlined, SettingOutlined, HistoryOutlined, HeartOutlined, CalendarOutlined, TrophyOutlined, StarOutlined, HeartFilled } from '@ant-design/icons'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../lib/auth'
+import { supabase } from '../lib/supabaseClient'
 
 const { Title, Text } = Typography
 const { TabPane } = Tabs
 
 export function Profile() {
   const [activeTab, setActiveTab] = useState('overview')
-
-  const userInfo = {
-    name: '张三',
-    email: 'zhangsan@example.com',
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [form] = Form.useForm()
+  const { user, loading: authLoading } = useAuth()
+  const [userData, setUserData] = useState({
+    name: '',
+    email: '',
     avatar: null,
-    plan: 'premium',
-    joinDate: '2024-01-15',
-    totalQuarrels: 45,
-    resolvedQuarrels: 38,
-    avgSeverity: 2.8,
-    longestQuarrel: 48,
-    shortestQuarrel: 5,
+    joinDate: '',
+  })
+  const [stats, setStats] = useState({
+    totalQuarrels: 0,
+    resolvedQuarrels: 0,
+    avgSeverity: 0,
+  })
+  const [loading, setLoading] = useState(true)
+
+  // 加载用户数据和统计
+  useEffect(() => {
+    if (user) {
+      loadUserData()
+      loadStats()
+    }
+  }, [user])
+
+  const loadUserData = () => {
+    const metadata = user.user_metadata || {}
+    setUserData({
+      name: metadata.display_name || metadata.name || user.email?.split('@')[0] || '用户',
+      email: user.email,
+      avatar: metadata.avatar_url || null,
+      joinDate: new Date(user.created_at).toLocaleDateString('zh-CN'),
+    })
+    setLoading(false)
+  }
+
+  const loadStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('quarrels')
+        .select('*')
+        .eq('creator', user.id)
+
+      if (error) throw error
+
+      const total = data?.length || 0
+      const resolved = data?.filter(q => q.status === 'resolved').length || 0
+      const avgSeverity = total > 0 
+        ? (data.reduce((sum, q) => sum + (q.strength || 0), 0) / total).toFixed(1)
+        : 0
+
+      setStats({
+        totalQuarrels: total,
+        resolvedQuarrels: resolved,
+        avgSeverity: parseFloat(avgSeverity),
+      })
+    } catch (error) {
+      console.error('加载统计失败:', error)
+    }
+  }
+
+  // 更新用户资料
+  const handleUpdateProfile = async (values) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { display_name: values.displayName }
+      })
+
+      if (error) throw error
+
+      message.success('资料更新成功！')
+      setUserData(prev => ({ ...prev, name: values.displayName }))
+      setEditModalVisible(false)
+    } catch (error) {
+      message.error('更新失败：' + error.message)
+    }
+  }
+
+  // 打开编辑模态框
+  const openEditModal = () => {
+    form.setFieldsValue({ displayName: userData.name })
+    setEditModalVisible(true)
   }
 
   const recentActivities = [
     {
       date: '2024-02-20',
-      content: '记录了一次关于生活习惯的争吵',
+      content: '记录了一次关于生活习惯的情感交流',
       severity: 3,
       resolved: true,
     },
     {
       date: '2024-02-18',
-      content: '成功和解了一次工作压力引发的争吵',
+      content: '成功和解了一次工作压力引发的情感交流',
       severity: 4,
       resolved: true,
     },
     {
       date: '2024-02-15',
-      content: '记录了一次关于金钱问题的分歧',
+      content: '记录了一次关于金钱问题的情感交流',
       severity: 2,
       resolved: false,
     },
@@ -44,13 +115,12 @@ export function Profile() {
 
   const achievements = [
     { title: '和解大师', description: '连续10次成功和解', icon: <TrophyOutlined />, color: '#ffd700' },
-    { title: '记录达人', description: '累计记录50次争吵', icon: <HistoryOutlined />, color: '#ff6b6b' },
+    { title: '记录达人', description: '累计记录50次情感交流', icon: <HistoryOutlined />, color: '#ff6b6b' },
     { title: '沟通专家', description: '平均严重程度低于3星', icon: <StarOutlined />, color: '#52c41a' },
     { title: '坚持之星', description: '连续使用30天', icon: <CalendarOutlined />, color: '#1890ff' },
   ]
 
   const handleExport = () => {
-    // 数据导出逻辑
     console.log('导出数据')
   }
 
@@ -58,6 +128,14 @@ export function Profile() {
     if (info.file.status === 'done') {
       console.log('头像上传成功')
     }
+  }
+
+  if (authLoading || loading) {
+    return (
+      <div style={{ padding: '8px', textAlign: 'center', marginTop: '100px' }}>
+        <Text>加载中...</Text>
+      </div>
+    )
   }
 
   return (
@@ -94,7 +172,7 @@ export function Profile() {
                 <Avatar
                   size={80}
                   icon={<UserOutlined />}
-                  src={userInfo.avatar}
+                  src={userData.avatar}
                   style={{ 
                     backgroundColor: '#ff6b6b',
                     cursor: 'pointer',
@@ -104,22 +182,22 @@ export function Profile() {
                 />
               </Upload>
               <Title level={3} style={{ color: '#ff6b6b', margin: '16px 0 8px' }}>
-                {userInfo.name}
+                {userData.name}
               </Title>
               <Tag 
-                color={userInfo.plan === 'premium' ? 'gold' : 'default'}
+                color="gold"
                 style={{ borderRadius: '12px', fontSize: '12px', padding: '4px 12px' }}
               >
-                {userInfo.plan === 'premium' ? '高级会员' : '普通会员'}
+                高级会员
               </Tag>
             </div>
 
             <Descriptions column={1} size="small" style={{ marginBottom: '24px' }}>
               <Descriptions.Item label="邮箱">
-                <Text style={{ color: '#666' }}>{userInfo.email}</Text>
+                <Text style={{ color: '#666' }}>{userData.email}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="加入时间">
-                <Text style={{ color: '#666' }}>{userInfo.joinDate}</Text>
+                <Text style={{ color: '#666' }}>{userData.joinDate}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="会员状态">
                 <Badge status="success" text="活跃" />
@@ -130,6 +208,7 @@ export function Profile() {
               <Button
                 type="primary"
                 icon={<EditOutlined />}
+                onClick={openEditModal}
                 style={{
                   width: '100%',
                   background: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%)',
@@ -174,7 +253,7 @@ export function Profile() {
                 <Card size="small" style={{ borderRadius: '12px', textAlign: 'center' }}>
                   <Statistic
                     title="总记录数"
-                    value={userInfo.totalQuarrels}
+                    value={stats.totalQuarrels}
                     valueStyle={{ color: '#ff6b6b' }}
                     prefix={<HistoryOutlined />}
                   />
@@ -184,7 +263,7 @@ export function Profile() {
                 <Card size="small" style={{ borderRadius: '12px', textAlign: 'center' }}>
                   <Statistic
                     title="和解次数"
-                    value={userInfo.resolvedQuarrels}
+                    value={stats.resolvedQuarrels}
                     valueStyle={{ color: '#52c41a' }}
                     prefix={<HeartOutlined />}
                   />
@@ -194,7 +273,7 @@ export function Profile() {
                 <Card size="small" style={{ borderRadius: '12px', textAlign: 'center' }}>
                   <Statistic
                     title="平均严重程度"
-                    value={userInfo.avgSeverity}
+                    value={stats.avgSeverity}
                     precision={1}
                     valueStyle={{ color: '#1890ff' }}
                     prefix={<StarOutlined />}
@@ -205,7 +284,7 @@ export function Profile() {
                 <Card size="small" style={{ borderRadius: '12px', textAlign: 'center' }}>
                   <Statistic
                     title="和解率"
-                    value={Math.round((userInfo.resolvedQuarrels / userInfo.totalQuarrels) * 100)}
+                    value={stats.totalQuarrels > 0 ? Math.round((stats.resolvedQuarrels / stats.totalQuarrels) * 100) : 0}
                     suffix="%"
                     valueStyle={{ color: '#faad14' }}
                     prefix={<TrophyOutlined />}
@@ -219,7 +298,7 @@ export function Profile() {
                 和解率趋势
               </Title>
               <Progress
-                percent={Math.round((userInfo.resolvedQuarrels / userInfo.totalQuarrels) * 100)}
+                percent={stats.totalQuarrels > 0 ? Math.round((stats.resolvedQuarrels / stats.totalQuarrels) * 100) : 0}
                 strokeColor={{
                   '0%': '#ff6b6b',
                   '100%': '#52c41a',
@@ -350,6 +429,51 @@ export function Profile() {
           </TabPane>
         </Tabs>
       </Card>
+
+      {/* 编辑资料模态框 */}
+      <Modal
+        title="编辑资料"
+        open={editModalVisible}
+        onCancel={() => setEditModalVisible(false)}
+        footer={null}
+        style={{ top: 100 }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleUpdateProfile}
+          style={{ marginTop: '16px' }}
+        >
+          <Form.Item
+            label="显示名称"
+            name="displayName"
+            rules={[
+              { required: true, message: '请输入显示名称' },
+              { max: 20, message: '名称最多20个字符' }
+            ]}
+          >
+            <Input placeholder="输入您的显示名称" />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: '24px' }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={() => setEditModalVisible(false)}>
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{
+                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%)',
+                  border: 'none',
+                }}
+              >
+                保存
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }
