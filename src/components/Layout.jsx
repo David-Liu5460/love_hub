@@ -1,75 +1,99 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getRole, Roles, setRole } from '../lib/role'
+import { Layout as AntLayout, Menu, Avatar, Button, Space, Typography } from 'antd'
+import { HeartOutlined, DashboardOutlined, HistoryOutlined, PlusCircleOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons'
+import { useState } from 'react'
 
-const NavLink = ({ active, href, children }) => {
-  return (
-    <a className={active ? 'navLink navLinkActive' : 'navLink'} href={href}>
-      {children}
-    </a>
+const { Header, Content } = AntLayout
+const { Title } = Typography
+
+export function Layout({ children, routePath }) {
+  const [current, setCurrent] = useState(
+    routePath === '/new' ? 'new' : 
+    routePath === '/history' ? 'history' : 
+    routePath === '/profile' ? 'profile' : 
+    'dashboard'
   )
-}
 
-export const Layout = ({ routePath, children }) => {
-  const [role, setRoleState] = useState(() => getRole())
+  const menuItems = [
+    {
+      key: 'dashboard',
+      icon: <DashboardOutlined />,
+      label: '仪表板',
+    },
+    {
+      key: 'new',
+      icon: <PlusCircleOutlined />,
+      label: '新建记录',
+    },
+    {
+      key: 'history',
+      icon: <HistoryOutlined />,
+      label: '历史记录',
+    },
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心',
+    },
+  ]
 
-  useEffect(() => {
-    setRoleState(getRole())
-  }, [])
-
-  const roleLabel = useMemo(() => (role === Roles.female ? '女方' : '男方'), [role])
-
-  const onPickRole = (next) => {
-    const value = setRole(next)
-    setRoleState(value)
-    window.dispatchEvent(new Event('love_hub_role_change'))
+  const onMenuClick = (e) => {
+    setCurrent(e.key)
+    const path = e.key === 'dashboard' ? '/' : `/${e.key}`
+    window.location.hash = path
   }
 
   return (
-    <div className="appShell">
-      <header className="topBar">
-        <div className="brand">
-          <div className="brandMark">♥</div>
-          <div className="brandText">
-            <div className="brandTitle">情侣冲突管理平台</div>
-            <div className="brandSubtitle">记录 · 复盘 · 改善</div>
-          </div>
+    <AntLayout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f5 0%, #ffecec 100%)' }}>
+      <Header style={{ 
+        background: 'rgba(255, 255, 255, 0.95)', 
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 4px 12px rgba(255, 107, 107, 0.08)',
+        padding: '0 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <HeartOutlined style={{ fontSize: '24px', color: '#ff6b6b' }} />
+          <Title level={3} style={{ margin: 0, color: '#ff6b6b', fontWeight: 600 }}>
+            情侣吵架管理
+          </Title>
         </div>
+        
+        <Menu
+          mode="horizontal"
+          selectedKeys={[current]}
+          onClick={onMenuClick}
+          items={menuItems}
+          style={{
+            flex: 1,
+            border: 'none',
+            background: 'transparent',
+            fontSize: '15px',
+            fontWeight: 500,
+          }}
+          theme="light"
+        />
 
-        <nav className="nav">
-          <NavLink active={routePath === '/dashboard'} href="#/dashboard">
-            首页
-          </NavLink>
-          <NavLink active={routePath === '/new'} href="#/new">
-            记录吵架
-          </NavLink>
-          <NavLink active={routePath === '/history'} href="#/history">
-            历史记录
-          </NavLink>
-        </nav>
+        <Space size="middle">
+          <Avatar
+            size="default"
+            icon={<UserOutlined />}
+            style={{ backgroundColor: '#ff6b6b' }}
+          />
+          <Button
+            type="text"
+            icon={<LogoutOutlined />}
+            style={{ color: '#666' }}
+          >
+            退出
+          </Button>
+        </Space>
+      </Header>
 
-        <div className="roleBox">
-          <div className="roleBadge">{roleLabel}</div>
-          <div className="segmented">
-            <button
-              className={role === Roles.male ? 'segBtn segBtnActive' : 'segBtn'}
-              type="button"
-              onClick={() => onPickRole(Roles.male)}
-            >
-              男方
-            </button>
-            <button
-              className={role === Roles.female ? 'segBtn segBtnActive' : 'segBtn'}
-              type="button"
-              onClick={() => onPickRole(Roles.female)}
-            >
-              女方
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="main">{children}</main>
-    </div>
+      <Content style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+        {children}
+      </Content>
+    </AntLayout>
   )
 }
-

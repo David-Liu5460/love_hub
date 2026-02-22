@@ -1,252 +1,372 @@
-import { useEffect, useState } from 'react'
+import { Card, Form, Input, Select, Rate, Button, Row, Col, DatePicker, Typography, Space, message, Tag, Switch, Badge } from 'antd'
+import { SaveOutlined, ArrowLeftOutlined, CalendarOutlined, TagOutlined, EditOutlined, HeartFilled } from '@ant-design/icons'
+import { useState } from 'react'
 import { createQuarrel } from '../lib/quarrels'
-import { Roles } from '../lib/role'
-import { useRole } from '../lib/useRole'
 
-const parseTags = (raw) => {
-  const value = raw.trim()
-  if (!value) return []
-  return value
-    .split(/[,，]/g)
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .slice(0, 8)
-}
+const { Title, Text } = Typography
+const { TextArea } = Input
+const { Option } = Select
 
-export const NewQuarrel = ({ onNavigate }) => {
-  const role = useRole()
+const quarrelReasons = [
+  { value: 'habit', label: '生活习惯', icon: '🏠' },
+  { value: 'money', label: '金钱问题', icon: '💰' },
+  { value: 'family', label: '家庭关系', icon: '👨‍👩‍👧‍👦' },
+  { value: 'work', label: '工作压力', icon: '💼' },
+  { value: 'communication', label: '沟通问题', icon: '💬' },
+  { value: 'trust', label: '信任问题', icon: '🔒' },
+  { value: 'time', label: '时间分配', icon: '⏰' },
+  { value: 'other', label: '其他', icon: '📋' },
+]
 
-  const [title, setTitle] = useState('')
-  const [createAtLocal, setCreateAtLocal] = useState(() => {
-    const now = new Date()
-    const pad = (n) => String(n).padStart(2, '0')
-    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(
-      now.getMinutes()
-    )}`
-  })
-  const [details, setDetails] = useState('')
-  const [reason, setReason] = useState('')
-  const [opinionMale, setOpinionMale] = useState('')
-  const [opinionFemale, setOpinionFemale] = useState('')
-  const [isPrincipal, setIsPrincipal] = useState(false)
-  const [strength, setStrength] = useState(3)
-  const [tagsRaw, setTagsRaw] = useState('')
-  const [treatment, setTreatment] = useState('')
-  const [status, setStatus] = useState('未解决')
+const tagOptions = [
+  { value: 'urgent', label: '紧急', color: 'red' },
+  { value: 'important', label: '重要', color: 'orange' },
+  { value: 'recurring', label: '反复', color: 'blue' },
+  { value: 'minor', label: '轻微', color: 'green' },
+  { value: 'resolved', label: '已解决', color: 'cyan' },
+]
 
-  const [submitting, setSubmitting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+const treatmentOptions = [
+  { value: 'talk', label: '沟通协商' },
+  { value: 'cooldown', label: '冷静期' },
+  { value: 'apologize', label: '道歉和解' },
+  { value: 'compromise', label: '互相妥协' },
+  { value: 'third_party', label: '第三方调解' },
+  { value: 'pending', label: '待处理' },
+]
 
-  useEffect(() => {
-    if (role === Roles.male) setOpinionFemale('')
-    if (role === Roles.female) setOpinionMale('')
-  }, [role])
+const statusOptions = [
+  { value: 'ongoing', label: '进行中', color: 'processing' },
+  { value: 'resolved', label: '已和解', color: 'success' },
+  { value: 'pending', label: '待处理', color: 'warning' },
+  { value: 'escalated', label: '升级中', color: 'error' },
+]
 
-  const myOpinionLabel = role === Roles.female ? '女方陈述' : '男方陈述'
+export function NewQuarrel({ onNavigate }) {
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
 
-  const onSubmit = async (e) => {
-    e.preventDefault()
-    setErrorMessage('')
-
-    if (!title.trim()) {
-      setErrorMessage('请填写标题')
-      return
-    }
-    if (!details.trim()) {
-      setErrorMessage('请填写详细描述')
-      return
-    }
-
-    const myOpinion = role === Roles.female ? opinionFemale : opinionMale
-    if (!myOpinion.trim()) {
-      setErrorMessage(`请填写${myOpinionLabel}`)
-      return
-    }
-
-    const payload = {
-      title: title.trim(),
-      create_at: new Date(createAtLocal).toISOString(),
-      details: details.trim(),
-      reason: reason.trim() || null,
-      opinion_male: role === Roles.male ? opinionMale.trim() : null,
-      opinion_female: role === Roles.female ? opinionFemale.trim() : null,
-      is_principal: Boolean(isPrincipal),
-      strength: Number(strength),
-      tag: parseTags(tagsRaw),
-      treatment: treatment.trim() || null,
-      status: status || null,
-    }
-
+  const handleSubmit = async (values) => {
+    setLoading(true)
     try {
-      setSubmitting(true)
-      const { data, error } = await createQuarrel(payload)
-      setSubmitting(false)
-
-      if (error) {
-        setErrorMessage(error.message)
-        return
+      const quarrelData = {
+        title: values.title,
+        details: values.details,
+        reason: values.reason,
+        strength: values.strength,
+        is_principal: values.is_principal || false,
+        tag: values.tag || [],
+        treatment: values.treatment,
+        status: values.status || 'ongoing',
+        opinion_male: values.opinion_male,
+        opinion_female: values.opinion_female,
+        create_at: values.create_at?.toISOString(),
+        update_at: new Date().toISOString(),
+        creator: '94e86047-0e52-4611-bce9-f6f2b06b4531',
       }
 
-      onNavigate(`/history?id=${data.id}`)
-    } catch (e) {
-      setSubmitting(false)
-      setErrorMessage(e?.message || '保存失败')
+      await createQuarrel(quarrelData)
+      message.success('吵架记录创建成功！')
+      form.resetFields()
+      onNavigate('/history')
+    } catch (error) {
+      message.error('创建失败，请重试')
+      console.error('Error creating quarrel:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="page">
-      <div className="pageHead">
-        <div>
-          <div className="pageTitle">记录吵架</div>
-          <div className="pageDesc">把事实写清楚，把感受表达出来，把方案落到行动。</div>
-        </div>
-        <button className="btn btnGhost" type="button" onClick={() => onNavigate('/dashboard')}>
-          返回首页
-        </button>
+    <div style={{ padding: '8px', maxWidth: '100%', margin: '0 auto' }}>
+      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+        <Title level={2} style={{ color: '#ff6b6b', marginBottom: '8px' }}>
+          记录吵架事件
+        </Title>
+        <Text type="secondary" style={{ fontSize: '16px' }}>
+          坦诚记录，理性分析，让每一次争吵都成为感情的催化剂
+        </Text>
       </div>
 
-      {errorMessage ? <div className="alert">{errorMessage}</div> : null}
-
-      <form className="card form" onSubmit={onSubmit}>
-        <div className="formGrid">
-          <label className="field">
-            <div className="label">
-              标题 <span className="req">*</span>
-            </div>
-            <input
-              className="input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="简要概括这次冲突"
+      <Card
+        style={{
+          borderRadius: '20px',
+          boxShadow: '0 12px 32px rgba(255, 107, 107, 0.15)',
+          border: '1px solid #f0f0f0',
+        }}
+        bodyStyle={{ padding: '32px' }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          size="large"
+          requiredMark={false}
+        >
+          {/* 标题 */}
+          <Form.Item
+            label="事件标题"
+            name="title"
+            rules={[{ required: true, message: '请输入事件标题' }]}
+          >
+            <Input
+              placeholder="给这次争吵起个标题..."
+              style={{ borderRadius: '12px' }}
+              prefix={<EditOutlined style={{ color: '#ff6b6b' }} />}
             />
-          </label>
+          </Form.Item>
 
-          <label className="field">
-            <div className="label">
-              日期时间 <span className="req">*</span>
-            </div>
-            <input
-              className="input"
-              type="datetime-local"
-              value={createAtLocal}
-              onChange={(e) => setCreateAtLocal(e.target.value)}
+          {/* 事件详情 */}
+          <Form.Item
+            label="事件详情"
+            name="details"
+            rules={[{ required: true, message: '请描述事件详情' }]}
+          >
+            <TextArea
+              rows={4}
+              placeholder="详细描述吵架的经过、主要分歧点..."
+              style={{ borderRadius: '12px', resize: 'none' }}
             />
-          </label>
+          </Form.Item>
 
-          <label className="field span2">
-            <div className="label">
-              详细描述 <span className="req">*</span>
-            </div>
-            <textarea
-              className="textarea"
-              rows={5}
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="写清楚发生了什么、各自做了什么、说了什么"
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
+              {/* 吵架原因 */}
+              <Form.Item
+                label="吵架原因"
+                name="reason"
+                rules={[{ required: true, message: '请选择吵架原因' }]}
+              >
+                <Select
+                  placeholder="选择吵架原因"
+                  style={{ borderRadius: '12px' }}
+                  dropdownStyle={{ borderRadius: '12px' }}
+                >
+                  {quarrelReasons.map((reason) => (
+                    <Option key={reason.value} value={reason.value}>
+                      <span style={{ marginRight: '8px' }}>{reason.icon}</span>
+                      {reason.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={12}>
+              {/* 强度等级 */}
+              <Form.Item
+                label="强度等级"
+                name="strength"
+                rules={[{ required: true, message: '请评估强度等级' }]}
+              >
+                <Rate
+                  count={5}
+                  style={{ color: '#ff6b6b', fontSize: '28px' }}
+                  tooltips={[
+                    '轻微分歧',
+                    '小争执',
+                    '中等争吵',
+                    '严重争吵',
+                    '非常严重的争吵'
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
+              {/* 发生时间 */}
+              <Form.Item
+                label="发生时间"
+                name="create_at"
+                rules={[{ required: true, message: '请选择发生时间' }]}
+              >
+                <DatePicker
+                  showTime
+                  placeholder="选择日期和时间"
+                  style={{ width: '100%', borderRadius: '12px' }}
+                  suffixIcon={<CalendarOutlined style={{ color: '#ff6b6b' }} />}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={12}>
+              {/* 标签 */}
+              <Form.Item
+                label="标签"
+                name="tag"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="选择标签（可选）"
+                  allowClear
+                  style={{ borderRadius: '12px' }}
+                  dropdownStyle={{ borderRadius: '12px' }}
+                  suffixIcon={<TagOutlined style={{ color: '#ff6b6b' }} />}
+                  tagRender={({ label, value, closable, onClose }) => (
+                    <Tag color={tagOptions.find(t => t.value === value)?.color || 'default'} closable={closable} onClose={onClose} style={{ marginRight: 4 }}>
+                      {label}
+                    </Tag>
+                  )}
+                >
+                  {tagOptions.map((tag) => (
+                    <Option key={tag.value} value={tag.value}>
+                      <Tag color={tag.color}>{tag.label}</Tag>
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
+              {/* 处理方式 */}
+              <Form.Item
+                label="处理方式"
+                name="treatment"
+              >
+                <Select
+                  placeholder="选择处理方式（可选）"
+                  allowClear
+                  style={{ borderRadius: '12px' }}
+                  dropdownStyle={{ borderRadius: '12px' }}
+                >
+                  {treatmentOptions.map((treatment) => (
+                    <Option key={treatment.value} value={treatment.value}>
+                      {treatment.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={12}>
+              {/* 状态 */}
+              <Form.Item
+                label="当前状态"
+                name="status"
+                initialValue="ongoing"
+              >
+                <Select
+                  placeholder="选择状态"
+                  style={{ borderRadius: '12px' }}
+                  dropdownStyle={{ borderRadius: '12px' }}
+                >
+                  {statusOptions.map((status) => (
+                    <Option key={status.value} value={status.value}>
+                      <Badge status={status.color} text={status.label} />
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 是否原则性问题 */}
+          <Form.Item
+            label="是否原则性问题"
+            name="is_principal"
+            valuePropName="checked"
+          >
+            <Switch
+              checkedChildren="是"
+              unCheckedChildren="否"
+              style={{ backgroundColor: '#ff6b6b' }}
             />
-          </label>
+          </Form.Item>
 
-          <div className="split span2">
-            <label className="field">
-              <div className="label">男方陈述</div>
-              <textarea
-                className="textarea"
-                rows={4}
-                value={opinionMale}
-                onChange={(e) => setOpinionMale(e.target.value)}
-                placeholder="男方的观点与感受"
-                disabled={role !== Roles.male}
-              />
-              {role !== Roles.male ? <div className="hint">当前身份为女方：先填写你的陈述。</div> : null}
-            </label>
+          <Row gutter={[32, 24]}>
+            <Col xs={24} md={12}>
+              {/* 男方观点 */}
+              <Form.Item
+                label="男方观点"
+                name="opinion_male"
+              >
+                <TextArea
+                  rows={3}
+                  placeholder="男方的想法和感受..."
+                  style={{ borderRadius: '12px', resize: 'none' }}
+                />
+              </Form.Item>
+            </Col>
 
-            <label className="field">
-              <div className="label">女方陈述</div>
-              <textarea
-                className="textarea"
-                rows={4}
-                value={opinionFemale}
-                onChange={(e) => setOpinionFemale(e.target.value)}
-                placeholder="女方的观点与感受"
-                disabled={role !== Roles.female}
-              />
-              {role !== Roles.female ? <div className="hint">当前身份为男方：先填写你的陈述。</div> : null}
-            </label>
+            <Col xs={24} md={12}>
+              {/* 女方观点 */}
+              <Form.Item
+                label="女方观点"
+                name="opinion_female"
+              >
+                <TextArea
+                  rows={3}
+                  placeholder="女方的想法和感受..."
+                  style={{ borderRadius: '12px', resize: 'none' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <div style={{ textAlign: 'center', marginTop: '32px' }}>
+            <Space size="large">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                icon={<SaveOutlined />}
+                style={{
+                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '0 32px',
+                  height: '48px',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                }}
+              >
+                保存记录
+              </Button>
+              <Button
+                onClick={() => onNavigate('/')}
+                icon={<ArrowLeftOutlined />}
+                style={{
+                  borderRadius: '12px',
+                  padding: '0 24px',
+                  height: '48px',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  border: '2px solid #ff6b6b',
+                  color: '#ff6b6b',
+                }}
+              >
+                返回首页
+              </Button>
+            </Space>
           </div>
+        </Form>
+      </Card>
 
-          <label className="field span2">
-            <div className="label">触发原因</div>
-            <input
-              className="input"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="是什么触发了这次冲突？"
-            />
-          </label>
-
-          <div className="row span2">
-            <label className="check">
-              <input type="checkbox" checked={isPrincipal} onChange={(e) => setIsPrincipal(e.target.checked)} />
-              <span>原则性问题</span>
-            </label>
-
-            <div className="rangeBox">
-              <div className="label">吵架强度（1-5）</div>
-              <input
-                className="range"
-                type="range"
-                min={1}
-                max={5}
-                value={strength}
-                onChange={(e) => setStrength(Number(e.target.value))}
-              />
-              <div className="rangeMeta">
-                <span>轻微</span>
-                <span>中等</span>
-                <span>激烈</span>
-              </div>
-            </div>
-          </div>
-
-          <label className="field span2">
-            <div className="label">标签</div>
-            <input
-              className="input"
-              value={tagsRaw}
-              onChange={(e) => setTagsRaw(e.target.value)}
-              placeholder="用逗号分隔：沟通、家务、时间…"
-            />
-            <div className="hint">最多 8 个标签，用中文/英文逗号分隔。</div>
-          </label>
-
-          <label className="field span2">
-            <div className="label">处理措施</div>
-            <textarea
-              className="textarea"
-              rows={3}
-              value={treatment}
-              onChange={(e) => setTreatment(e.target.value)}
-              placeholder="你们采取了哪些措施来解决？下一步怎么做？"
-            />
-          </label>
-
-          <label className="field span2">
-            <div className="label">状态</div>
-            <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="未解决">未解决</option>
-              <option value="处理中">处理中</option>
-              <option value="已解决">已解决</option>
-            </select>
-          </label>
+      {/* 温馨提示 */}
+      <Card
+        style={{
+          marginTop: '24px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #fff5f5 0%, #ffecec 100%)',
+          border: '1px solid #ffd8d8',
+        }}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <HeartFilled style={{ color: '#ff6b6b', fontSize: '24px', marginBottom: '12px' }} />
+          <Title level={4} style={{ color: '#ff6b6b', marginBottom: '8px' }}>
+            温馨小贴士
+          </Title>
+          <Text type="secondary" style={{ fontSize: '14px', lineHeight: '1.6' }}>
+            每一次争吵都是了解彼此的机会，记录下这些时刻，
+            让我们一起成长，让爱情更加坚固。
+          </Text>
         </div>
-
-        <div className="formActions">
-          <button className="btn btnPrimary" type="submit" disabled={submitting}>
-            {submitting ? '保存中…' : '保存吵架记录'}
-          </button>
-        </div>
-      </form>
+      </Card>
     </div>
   )
 }

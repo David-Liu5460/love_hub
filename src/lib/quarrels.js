@@ -52,3 +52,23 @@ export const updateQuarrel = async (id, patch) => {
 
 export const isQuarrelComplete = (row) => Boolean(row?.opinion_male?.trim() && row?.opinion_female?.trim())
 
+export const getQuarrels = async () => {
+  const client = ensureSupabase()
+  const { data, error } = await client
+    .from('quarrels')
+    .select('*')
+    .order('create_at', { ascending: false })
+  
+  if (error) throw error
+  return data
+}
+
+export const deleteQuarrel = async (id) => {
+  const client = ensureSupabase()
+  const { error } = await client
+    .from('quarrels')
+    .delete()
+    .eq('id', id)
+  
+  if (error) throw error
+}
